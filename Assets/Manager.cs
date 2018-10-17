@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class Manager : MonoBehaviour {
 
-    private List<Transform> playerOneTransforms = new List<Transform>();
-    private List<Transform> playerTwoTransforms = new List<Transform>();
+    public GameObject cubePrefab;
+    public ScoreManager scoreManager;
+
+    private List<Transform> cubes = new List<Transform>();
 
     private enum PlayerTurn
     {
@@ -15,42 +17,22 @@ public class Manager : MonoBehaviour {
 
     private PlayerTurn currentPlayer;
 
-    private Vector3 mouseDownPosition;
-    private bool mouseDown = false;
+    private bool player1Winner = false;
+    private bool player2Winner = false;
+
+
 
     // Use this for initialization
     void Start () {
+        scoreManager = GetComponent<ScoreManager>();
         currentPlayer = PlayerTurn.One;
+        DynamicGI.UpdateEnvironment();
+        createCubes();
 	}
 	
 	// Update is called once per frame
 	void Update () {
-        if (mouseDown)
-        {
-            //Camera.main.transform.parent.Rotate(Vector3.up, 1.5f);
-            Camera.main.transform.parent.Rotate(Vector3.right, 1.5f);
-        }
-        if (Input.GetMouseButtonDown(0))
-        {
-            mouseDownPosition = Input.mousePosition;
-            mouseDown = true;
-        }
-        if (Input.GetMouseButtonUp(0))
-        {
-            if (mouseDownPosition == Input.mousePosition)
-            {
-                RaycastHit hit;
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                if (Physics.Raycast(ray, out hit, 199.0f))
-                {
-                    if (hit.transform != null)
-                    {
-                        onCubeClicked(hit.transform);
-                    }
-                }
-            }
-            mouseDown = false;
-        }
+        
     }
 
     public void onCubeClicked (Transform transform)
@@ -60,15 +42,60 @@ public class Manager : MonoBehaviour {
         {
             if (currentPlayer == PlayerTurn.One)
             {
-                playerOneTransforms.Add(transform);
                 renderer.material.color = Color.blue;
                 currentPlayer = PlayerTurn.Two;
+                transform.gameObject.GetComponent<CubeScript>().player = 2;
             }
             else
             {
-                playerTwoTransforms.Add(transform);
                 renderer.material.color = Color.red;
                 currentPlayer = PlayerTurn.One;
+                transform.gameObject.GetComponent<CubeScript>().player = 1;
+            }
+            scoreManager.checkScore();
+        }
+    }
+
+    
+
+    public void createCubes()
+    {
+        cubes = new List<Transform>();
+        Debug.Log("starting to create cubes");
+
+        var size = 2;
+
+        for(int x = -size; x <= size; x++)
+        {
+            for (int y = -size; y <= size; y++)
+            {
+                for (int z = -size; z <= size; z++)
+                {
+                    instantiateCube(x, y, z);
+                }
+            }
+        }
+    }
+
+    private void instantiateCube(int x, int y, int z)
+    {
+        int offset = 0;
+        if (x == 0 && y == 0 && z == 0)
+        {
+            Debug.Log("center, skipping");
+        }
+        else
+        {
+            GameObject cube = Instantiate(cubePrefab, new Vector3(x + offset, y, z), Quaternion.identity);
+            cubes.Add(cube.transform);
+            var script = cube.GetComponent<CubeScript>();
+            script.gridLocation = new Vector3(x, y, z);
+            
+            if ((x == 0 && y == 0 && z != 0) ||
+                (x != 0 && y == 0 && z == 0) ||
+                (x == 0 && y != 0 && z == 0))
+            {            
+                cube.GetComponent<Renderer>().material.color = Color.gray;
             }
         }
     }
